@@ -1,0 +1,34 @@
+# Built artifacts
+*.iml
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+
+# Security & Secrets
+# VERY IMPORTANT: Keep your Firebase configuration private
+google-services.json
+
+# Local configuration
+local.properties
+
+# Gradle
+.gradle/
+build/
+
+# Kotlin / Android Studio specific
+.navigation/
+captures/
+*.apk
+*.aar
+*.jks
+
+# Logs
+*.log
