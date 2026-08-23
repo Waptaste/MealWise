@@ -1,5 +1,6 @@
 package com.example.mealwise.di
 
+import com.example.mealwise.data.api.HdxApiService
 import com.example.mealwise.data.repository.AuthRepository
 import com.example.mealwise.data.repository.BudgetRepository
 import com.example.mealwise.data.repository.FirebaseAuthRepository
@@ -15,6 +16,8 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
 
 @Module
@@ -53,5 +56,15 @@ abstract class FirebaseModule {
         @Provides
         @Singleton
         fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+
+        @Provides
+        @Singleton
+        fun provideHdxApiService(): HdxApiService {
+            return Retrofit.Builder()
+                .baseUrl("https://hapi.humdata.org/api/v1/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+                .create(HdxApiService::class.java)
+        }
     }
 }

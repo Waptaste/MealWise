@@ -109,13 +109,12 @@ fun MealWiseNavHost() {
             )
         }
 
-        // Nested Navigation Graph for main app area to share MealPlannerViewModel
+        // Nested Navigation Graph for main app area to share ViewModels
         navigation(startDestination = AppDestination.Home.route, route = "main") {
             composable(AppDestination.Home.route) { backStackEntry ->
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry("main")
                 }
-                val plannerViewModel: MealPlannerViewModel = hiltViewModel(parentEntry)
                 
                 HomeScreen(
                     viewModel = authViewModel,
@@ -199,8 +198,12 @@ fun MealWiseNavHost() {
                 )
             }
 
-            composable(AppDestination.BudgetPlanner.route) {
-                val budgetViewModel: BudgetViewModel = hiltViewModel()
+            composable(AppDestination.BudgetPlanner.route) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("main")
+                }
+                val budgetViewModel: BudgetViewModel = hiltViewModel(parentEntry)
+                
                 BudgetScreen(
                     viewModel = budgetViewModel,
                     onNavigateToManagePrices = {
@@ -209,8 +212,12 @@ fun MealWiseNavHost() {
                 )
             }
 
-            composable(AppDestination.ManagePrices.route) {
-                val budgetViewModel: BudgetViewModel = hiltViewModel()
+            composable(AppDestination.ManagePrices.route) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("main")
+                }
+                val budgetViewModel: BudgetViewModel = hiltViewModel(parentEntry)
+
                 ManagePricesScreen(
                     viewModel = budgetViewModel,
                     onBack = { navController.popBackStack() }

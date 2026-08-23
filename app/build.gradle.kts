@@ -82,6 +82,10 @@ dependencies {
 
     // Firebase. These libraries can remain declared before google-services.json
     // is added; the Google Services Gradle plugin is applied conditionally above.
+    // Networking
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.firestore)

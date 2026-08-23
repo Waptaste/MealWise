@@ -20,6 +20,7 @@ google-services.json
 local.properties
 
 # Gradle
+
 .gradle/
 build/
 
@@ -32,3 +33,5 @@ captures/
 
 # Logs
 *.log
+
+.idea/

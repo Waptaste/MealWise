@@ -11,5 +11,6 @@ data class BudgetUiState(
     val generatedBudget: MonthlyBudget? = null,
     val commodities: List<Commodity> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val itemToReplace: String? = null // Name of the item being replaced
 )
