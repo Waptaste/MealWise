@@ -129,6 +129,8 @@ class AuthViewModel @Inject constructor(
                         isLoading = false,
                         authenticatedProfile = profile
                     )
+                    // Inform user about verification email
+                    _uiState.value = _uiState.value.copy(generalError = "Account created! Please check your email to verify your account.")
                     _navigationEvents.emit(AuthNavigationEvent.NavigateToHome)
                 }.onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
@@ -136,6 +138,33 @@ class AuthViewModel @Inject constructor(
                         generalError = exception.message ?: "An unknown error occurred during registration"
                     )
                 }
+            }
+        }
+    }
+
+    fun resetPassword(email: String) {
+        if (email.isBlank() || !isValidEmail(email)) {
+            _uiState.value = _uiState.value.copy(emailError = "Please enter a valid email")
+            return
+        }
+        
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, generalError = null)
+            authRepository.sendPasswordResetEmail(email).onSuccess {
+                _uiState.value = _uiState.value.copy(isLoading = false, generalError = "Password reset email sent!")
+            }.onFailure { e ->
+                _uiState.value = _uiState.value.copy(isLoading = false, generalError = e.message)
+            }
+        }
+    }
+
+    fun updateProfile(profile: com.example.mealwise.data.model.UserProfile) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, generalError = null)
+            authRepository.updateUserProfile(profile).onSuccess {
+                _uiState.value = _uiState.value.copy(authenticatedProfile = profile, isLoading = false)
+            }.onFailure { e ->
+                _uiState.value = _uiState.value.copy(isLoading = false, generalError = e.message)
             }
         }
     }

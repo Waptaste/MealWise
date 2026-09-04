@@ -14,5 +14,7 @@ data class Recipe(
     val proteinGrams: Int = 0,
     val carbsGrams: Int = 0,
     val fatsGrams: Int = 0,
-    val servings: Int = 1
+    val servings: Int = 1,
+    val isUserCreated: Boolean = false,
+    val creatorId: String? = null
 )

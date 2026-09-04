@@ -67,8 +67,8 @@ class FirebaseMealPlanRepository @Inject constructor(
 
     override suspend fun updateShoppingItem(item: ShoppingItem): Result<Unit> {
         return try {
-            // ALWAYS use name as the document ID for stability
-            val docId = item.name
+            // Use the actual unique ID, not the name
+            val docId = item.id.ifBlank { firestore.collection("users").document(item.userId).collection("shopping_list").document().id }
             firestore.collection("users")
                 .document(item.userId)
                 .collection("shopping_list")
@@ -100,7 +100,8 @@ class FirebaseMealPlanRepository @Inject constructor(
             val collection = firestore.collection("users").document(userId).collection("shopping_list")
             
             items.forEach { item ->
-                val docId = item.name
+                // Generate unique ID if not present
+                val docId = item.id.ifBlank { collection.document().id }
                 val itemToSave = item.copy(id = docId, userId = userId)
                 batch.set(collection.document(docId), itemToSave)
             }

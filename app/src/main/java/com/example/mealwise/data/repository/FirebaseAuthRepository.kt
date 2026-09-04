@@ -20,7 +20,11 @@ class FirebaseAuthRepository @Inject constructor(
     ): Result<UserProfile> {
         return try {
             val authResult = firebaseAuth.createUserWithEmailAndPassword(email, password).await()
-            val uid = authResult.user?.uid ?: throw Exception("User creation failed")
+            val user = authResult.user ?: throw Exception("User creation failed")
+            val uid = user.uid
+            
+            // Send verification email
+            user.sendEmailVerification().await()
             
             val userProfile = UserProfile(
                 uid = uid,
@@ -90,6 +94,28 @@ class FirebaseAuthRepository @Inject constructor(
 
     override fun isUserAuthenticated(): Boolean {
         return firebaseAuth.currentUser != null
+    }
+
+    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
+        return try {
+            firebaseAuth.sendPasswordResetEmail(email).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun sendEmailVerification(): Result<Unit> {
+        return try {
+            firebaseAuth.currentUser?.sendEmailVerification()?.await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override fun isEmailVerified(): Boolean {
+        return firebaseAuth.currentUser?.isEmailVerified == true
     }
 
     override fun logout() {

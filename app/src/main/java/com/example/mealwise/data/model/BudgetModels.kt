@@ -12,7 +12,8 @@ data class Commodity(
     val category: BudgetCategory = BudgetCategory.AVERAGE,
     val baseQuantityPerPerson: Double = 1.0, // Per month
     val isMustHave: Boolean = false, // User preference: prioritize this item
-    val isStaple: Boolean = false // Essential item protection logic
+    val isStaple: Boolean = false, // Essential item protection logic
+    val isDiscrete: Boolean = false // If true, quantity must be a whole number (e.g. bags, trays)
 )
 
 data class BudgetItem(
@@ -21,7 +22,8 @@ data class BudgetItem(
     val unit: String = "",
     val totalCost: Double = 0.0,
     val isMustHave: Boolean = false,
-    val isStaple: Boolean = false
+    val isStaple: Boolean = false,
+    val isDiscrete: Boolean = false
 )
 
 data class MonthlyBudget(

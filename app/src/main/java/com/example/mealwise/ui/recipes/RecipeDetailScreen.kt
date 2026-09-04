@@ -13,8 +13,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,14 +55,25 @@ fun RecipeDetailScreen(
                     .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(250.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "Recipe Image", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (recipe.imageUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = recipe.imageUrl,
+                        contentDescription = recipe.title,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(250.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(250.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = "Recipe Image", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
 
                 Column(modifier = Modifier.padding(16.dp)) {

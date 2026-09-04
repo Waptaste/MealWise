@@ -12,6 +12,7 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.mealwise.ui.auth.AuthViewModel
+import com.example.mealwise.ui.auth.ForgotPasswordScreen
 import com.example.mealwise.ui.auth.LoginScreen
 import com.example.mealwise.ui.auth.RegisterScreen
 import com.example.mealwise.ui.budget.BudgetScreen
@@ -24,6 +25,7 @@ import com.example.mealwise.ui.onboarding.OnboardingScreen
 import com.example.mealwise.ui.onboarding.OnboardingViewModel
 import com.example.mealwise.ui.planner.MealPlannerScreen
 import com.example.mealwise.ui.planner.MealPlannerViewModel
+import com.example.mealwise.ui.profile.ProfileScreen
 import com.example.mealwise.ui.recipes.RecipeDetailScreen
 import com.example.mealwise.ui.recipes.RecipeFeedScreen
 import com.example.mealwise.ui.recipes.RecipeViewModel
@@ -68,6 +70,9 @@ fun MealWiseNavHost() {
                 onNavigateToRegister = {
                     navController.navigate(AppDestination.Register.route)
                 },
+                onNavigateToForgotPassword = {
+                    navController.navigate(AppDestination.ForgotPassword.route)
+                },
                 onNavigateToHome = {
                     val profile = authViewModel.uiState.value.authenticatedProfile
                     if (profile?.onboardingCompleted == true) {
@@ -97,6 +102,13 @@ fun MealWiseNavHost() {
             )
         }
 
+        composable(AppDestination.ForgotPassword.route) {
+            ForgotPasswordScreen(
+                viewModel = authViewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
         composable(AppDestination.Onboarding.route) {
             val onboardingViewModel: OnboardingViewModel = hiltViewModel()
             OnboardingScreen(
@@ -112,10 +124,6 @@ fun MealWiseNavHost() {
         // Nested Navigation Graph for main app area to share ViewModels
         navigation(startDestination = AppDestination.Home.route, route = "main") {
             composable(AppDestination.Home.route) { backStackEntry ->
-                val parentEntry = remember(backStackEntry) {
-                    navController.getBackStackEntry("main")
-                }
-                
                 HomeScreen(
                     viewModel = authViewModel,
                     onNavigateToLogin = {
@@ -137,7 +145,17 @@ fun MealWiseNavHost() {
                     },
                     onNavigateToBudget = {
                         navController.navigate(AppDestination.BudgetPlanner.route)
+                    },
+                    onNavigateToProfile = {
+                        navController.navigate(AppDestination.Profile.route)
                     }
+                )
+            }
+
+            composable(AppDestination.Profile.route) {
+                ProfileScreen(
+                    viewModel = authViewModel,
+                    onBack = { navController.popBackStack() }
                 )
             }
 
@@ -147,7 +165,8 @@ fun MealWiseNavHost() {
                     viewModel = recipeViewModel,
                     onRecipeClick = { recipeId ->
                         navController.navigate(AppDestination.RecipeDetail(recipeId).route)
-                    }
+                    },
+                    onBack = { navController.popBackStack() }
                 )
             }
 
@@ -174,7 +193,8 @@ fun MealWiseNavHost() {
                     viewModel = plannerViewModel,
                     onNavigateToShopping = {
                         navController.navigate(AppDestination.ShoppingList.route)
-                    }
+                    },
+                    onBack = { navController.popBackStack() }
                 )
             }
 
@@ -208,7 +228,8 @@ fun MealWiseNavHost() {
                     viewModel = budgetViewModel,
                     onNavigateToManagePrices = {
                         navController.navigate(AppDestination.ManagePrices.route)
-                    }
+                    },
+                    onBack = { navController.popBackStack() }
                 )
             }
 

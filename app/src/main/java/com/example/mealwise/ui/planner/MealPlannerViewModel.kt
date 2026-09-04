@@ -55,19 +55,16 @@ class MealPlannerViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
             }
             .collect { (plans, items) ->
-                // MIGRATION & CLEANUP: deduplicate by name
-                val uniqueItems = items.groupBy { it.name }.map { (_, group) ->
-                    group.find { it.id == it.name } ?: group.first()
-                }.sortedBy { it.name }
+                // Sort by name for display, but keep them separate if they have different IDs
+                val sortedItems = items.sortedBy { it.name }
 
                 _uiState.value = _uiState.value.copy(
                     mealPlans = plans,
-                    shoppingList = uniqueItems,
+                    shoppingList = sortedItems,
                     isLoading = false
                 )
                 
-                cleanupLegacyItems(userId, items)
-                ensureIngredientsSync(userId, plans, uniqueItems)
+                ensureIngredientsSync(userId, plans, sortedItems)
             }
         }
     }
@@ -88,7 +85,7 @@ class MealPlannerViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(selectedDate = date)
     }
 
-    fun addMeal(recipeId: String, mealType: MealType) {
+    fun addMeal(recipeId: String, mealType: MealType, portionSize: Double = 1.0) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             val user = authRepository.getCurrentUserProfile().getOrNull() ?: return@launch
@@ -99,7 +96,8 @@ class MealPlannerViewModel @Inject constructor(
                 recipeId = recipeId,
                 recipeTitle = recipe.title,
                 date = _uiState.value.selectedDate.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli(),
-                mealType = mealType.name
+                mealType = mealType.name,
+                portionSize = portionSize
             )
             
             mealPlanRepository.addMealPlanEntry(entry).onFailure { e ->
@@ -116,18 +114,20 @@ class MealPlannerViewModel @Inject constructor(
         }
     }
 
-    fun toggleShoppingItem(itemName: String) {
+    fun toggleShoppingItem(itemId: String) {
         viewModelScope.launch {
-            val currentList = _uiState.value.shoppingList
-            val item = currentList.find { it.name == itemName } ?: return@launch
+            val currentList = _uiState.value.shoppingList.toList()
+            val itemIndex = currentList.indexOfFirst { it.id == itemId }
+            if (itemIndex == -1) return@launch
             
+            val item = currentList[itemIndex]
             val updatedItem = item.copy(isChecked = !item.isChecked)
             
             // Optimistic update
-            val optimisticList = currentList.map { 
-                if (it.name == itemName) updatedItem else it 
+            val updatedList = currentList.toMutableList().apply {
+                this[itemIndex] = updatedItem
             }
-            _uiState.value = _uiState.value.copy(shoppingList = optimisticList)
+            _uiState.value = _uiState.value.copy(shoppingList = updatedList)
 
             mealPlanRepository.updateShoppingItem(updatedItem).onFailure { e ->
                 _uiState.value = _uiState.value.copy(shoppingList = currentList, error = "Failed to save: ${e.message}")

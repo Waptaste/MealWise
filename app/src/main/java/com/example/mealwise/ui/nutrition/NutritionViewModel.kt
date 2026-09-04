@@ -64,34 +64,34 @@ class NutritionViewModel @Inject constructor(
         val today = LocalDate.now().atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
         val todayEntries = entries.filter { it.date == today }
         
-        var totalCalories = 0
-        var totalProtein = 0
-        var totalCarbs = 0
-        var totalFats = 0
+        var totalCalories = 0.0
+        var totalProtein = 0.0
+        var totalCarbs = 0.0
+        var totalFats = 0.0
         
         todayEntries.forEach { entry ->
             val recipe = allRecipes.find { it.id == entry.recipeId }
             if (recipe != null) {
-                totalCalories += recipe.calories
-                totalProtein += recipe.proteinGrams
-                totalCarbs += recipe.carbsGrams
-                totalFats += recipe.fatsGrams
+                totalCalories += recipe.calories * entry.portionSize
+                totalProtein += recipe.proteinGrams * entry.portionSize
+                totalCarbs += recipe.carbsGrams * entry.portionSize
+                totalFats += recipe.fatsGrams * entry.portionSize
             }
         }
 
         // Simple weekly average calculation (sum of all plans / 7)
-        var weeklyTotalCalories = 0
+        var weeklyTotalCalories = 0.0
         entries.forEach { entry ->
             val recipe = allRecipes.find { it.id == entry.recipeId }
-            weeklyTotalCalories += recipe?.calories ?: 0
+            weeklyTotalCalories += (recipe?.calories ?: 0) * entry.portionSize
         }
 
         _uiState.value = _uiState.value.copy(
-            dailyCalories = totalCalories,
-            dailyProtein = totalProtein,
-            dailyCarbs = totalCarbs,
-            dailyFats = totalFats,
-            weeklyAverageCalories = weeklyTotalCalories / 7,
+            dailyCalories = totalCalories.toInt(),
+            dailyProtein = totalProtein.toInt(),
+            dailyCarbs = totalCarbs.toInt(),
+            dailyFats = totalFats.toInt(),
+            weeklyAverageCalories = (weeklyTotalCalories / 7).toInt(),
             isLoading = false
         )
     }

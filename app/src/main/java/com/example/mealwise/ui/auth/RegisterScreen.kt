@@ -1,29 +1,33 @@
 package com.example.mealwise.ui.auth
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.AutofillType
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalAutofill
+import androidx.compose.ui.platform.LocalAutofillTree
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.autofill.AutofillNode
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.mealwise.ui.components.LoadingButton
 import com.example.mealwise.ui.components.MealWisePasswordField
 import com.example.mealwise.ui.components.MealWiseTextField
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     viewModel: AuthViewModel,
@@ -31,6 +35,8 @@ fun RegisterScreen(
     onNavigateToHome: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val autofill = LocalAutofill.current
+    val autofillTree = LocalAutofillTree.current
 
     LaunchedEffect(Unit) {
         viewModel.navigationEvents.collect { event ->
@@ -41,102 +47,156 @@ fun RegisterScreen(
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        Text(
-            text = "Create Account",
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Join MealWise today",
-            style = MaterialTheme.typography.bodyLarge
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        MealWiseTextField(
-            value = uiState.name,
-            onValueChange = { viewModel.onNameChanged(it) },
-            label = "Full Name",
-            error = uiState.nameError,
-            enabled = !uiState.isLoading,
-            testTag = "name_field"
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        MealWiseTextField(
-            value = uiState.email,
-            onValueChange = { viewModel.onEmailChanged(it) },
-            label = "Email",
-            error = uiState.emailError,
-            enabled = !uiState.isLoading,
-            testTag = "email_field"
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        MealWisePasswordField(
-            value = uiState.password,
-            onValueChange = { viewModel.onPasswordChanged(it) },
-            label = "Password",
-            error = uiState.passwordError,
-            isVisible = uiState.isPasswordVisible,
-            onToggleVisibility = { viewModel.togglePasswordVisibility() },
-            enabled = !uiState.isLoading,
-            testTag = "password_field"
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        MealWisePasswordField(
-            value = uiState.confirmPassword,
-            onValueChange = { viewModel.onConfirmPasswordChanged(it) },
-            label = "Confirm Password",
-            error = uiState.confirmPasswordError,
-            isVisible = uiState.isConfirmPasswordVisible,
-            onToggleVisibility = { viewModel.toggleConfirmPasswordVisibility() },
-            enabled = !uiState.isLoading,
-            testTag = "confirm_password_field"
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        uiState.generalError?.let {
-            Text(
-                text = it,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier
-                    .padding(bottom = 16.dp)
-                    .testTag("general_error")
-            )
-        }
-
-        LoadingButton(
-            text = "Register",
-            onClick = { viewModel.register() },
-            isLoading = uiState.isLoading,
-            enabled = !uiState.isLoading,
-            testTag = "register_button"
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        TextButton(
-            onClick = onNavigateToLogin,
-            enabled = !uiState.isLoading,
-            modifier = Modifier.testTag("navigate_to_login")
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text("Already have an account? Login")
+            Text(
+                text = "Create Account",
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "Join us for a healthier Zambian lifestyle",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            MealWiseTextField(
+                value = uiState.name,
+                onValueChange = { viewModel.onNameChanged(it) },
+                label = "Full Name",
+                error = uiState.nameError,
+                modifier = Modifier
+                    .testTag("name_field")
+                    .onGloballyPositioned { coordinates ->
+                        autofillTree += AutofillNode(
+                            autofillTypes = listOf(AutofillType.PersonFullName),
+                            onFill = { viewModel.onNameChanged(it) },
+                            boundingBox = coordinates.parentLayoutCoordinates?.localBoundingBoxOf(coordinates)
+                        )
+                    }
+                    .onFocusChanged { focusState ->
+                        if (focusState.isFocused) {
+                            autofill?.requestAutofillForNode(autofillTree.children.values.last())
+                        }
+                    }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            MealWiseTextField(
+                value = uiState.email,
+                onValueChange = { viewModel.onEmailChanged(it) },
+                label = "Email Address",
+                error = uiState.emailError,
+                modifier = Modifier
+                    .testTag("email_field")
+                    .onGloballyPositioned { coordinates ->
+                        autofillTree += AutofillNode(
+                            autofillTypes = listOf(AutofillType.EmailAddress),
+                            onFill = { viewModel.onEmailChanged(it) },
+                            boundingBox = coordinates.parentLayoutCoordinates?.localBoundingBoxOf(coordinates)
+                        )
+                    }
+                    .onFocusChanged { focusState ->
+                        if (focusState.isFocused) {
+                            autofill?.requestAutofillForNode(autofillTree.children.values.last())
+                        }
+                    }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            MealWisePasswordField(
+                value = uiState.password,
+                onValueChange = { viewModel.onPasswordChanged(it) },
+                label = "Password",
+                error = uiState.passwordError,
+                isVisible = uiState.isPasswordVisible,
+                onToggleVisibility = { viewModel.togglePasswordVisibility() },
+                modifier = Modifier
+                    .testTag("password_field")
+                    .onGloballyPositioned { coordinates ->
+                        autofillTree += AutofillNode(
+                            autofillTypes = listOf(AutofillType.NewPassword),
+                            onFill = { viewModel.onPasswordChanged(it) },
+                            boundingBox = coordinates.parentLayoutCoordinates?.localBoundingBoxOf(coordinates)
+                        )
+                    }
+                    .onFocusChanged { focusState ->
+                        if (focusState.isFocused) {
+                            autofill?.requestAutofillForNode(autofillTree.children.values.last())
+                        }
+                    }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            MealWisePasswordField(
+                value = uiState.confirmPassword,
+                onValueChange = { viewModel.onConfirmPasswordChanged(it) },
+                label = "Confirm Password",
+                error = uiState.confirmPasswordError,
+                isVisible = uiState.isConfirmPasswordVisible,
+                onToggleVisibility = { viewModel.toggleConfirmPasswordVisibility() },
+                modifier = Modifier.testTag("confirm_password_field")
+            )
+
+            if (uiState.generalError != null) {
+                Text(
+                    text = uiState.generalError!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            LoadingButton(
+                text = "Register",
+                isLoading = uiState.isLoading,
+                onClick = { viewModel.register() },
+                modifier = Modifier.testTag("register_button")
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Already have an account? ",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                TextButton(
+                    onClick = onNavigateToLogin,
+                    modifier = Modifier.testTag("navigate_login_button")
+                ) {
+                    Text(
+                        "Login", 
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
     }
 }

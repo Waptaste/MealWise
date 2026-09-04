@@ -77,25 +77,30 @@ class FirebaseBudgetRepository @Inject constructor(
             
             val defaults = listOf(
                 // ECONOMICAL
-                Commodity("1", "Roller Mealie Meal", freshPrices["Maize meal (roller)"] ?: 190.0, "25kg bag", BudgetCategory.ECONOMICAL, 0.5, isMustHave = true, isStaple = true),
+                Commodity("1", "Roller Mealie Meal", freshPrices["Maize meal (roller)"] ?: 190.0, "25kg bag", BudgetCategory.ECONOMICAL, 0.5, isMustHave = true, isStaple = true, isDiscrete = true),
                 Commodity("2", "Dry Beans", freshPrices["Beans (dried)"] ?: 25.0, "kg", BudgetCategory.ECONOMICAL, 2.0, isStaple = true),
-                Commodity("3", "Cabbage", freshPrices["Cabbage"] ?: 15.0, "Head", BudgetCategory.ECONOMICAL, 4.0),
+                Commodity("3", "Cabbage", freshPrices["Cabbage"] ?: 15.0, "Head", BudgetCategory.ECONOMICAL, 4.0, isDiscrete = true),
                 Commodity("4", "Small Kapenta", freshPrices["Kapenta"] ?: 80.0, "kg", BudgetCategory.ECONOMICAL, 1.0),
                 
                 // AVERAGE
-                Commodity("5", "Breakfast Mealie Meal", freshPrices["Maize meal (breakfast)"] ?: 230.0, "25kg bag", BudgetCategory.AVERAGE, 0.5, isMustHave = true, isStaple = true),
+                Commodity("5", "Breakfast Mealie Meal", freshPrices["Maize meal (breakfast)"] ?: 230.0, "25kg bag", BudgetCategory.AVERAGE, 0.5, isMustHave = true, isStaple = true, isDiscrete = true),
                 Commodity("6", "Mixed Vegetables", 40.0, "kg", BudgetCategory.AVERAGE, 3.0),
-                Commodity("7", "Soy Pieces", 20.0, "500g pack", BudgetCategory.AVERAGE, 4.0),
-                Commodity("8", "Eggs", freshPrices["Eggs"] ?: 65.0, "Tray (30)", BudgetCategory.AVERAGE, 1.0),
-                Commodity("9", "Cooking Oil", freshPrices["Oil (vegetable)"] ?: 85.0, "2L", BudgetCategory.AVERAGE, 1.0, isStaple = true),
+                Commodity("7", "Soy Pieces", 20.0, "500g pack", BudgetCategory.AVERAGE, 4.0, isDiscrete = true),
+                Commodity("8", "Eggs", freshPrices["Eggs"] ?: 65.0, "Tray (30)", BudgetCategory.AVERAGE, 1.0, isDiscrete = true),
+                Commodity("9", "Cooking Oil", freshPrices["Oil (vegetable)"] ?: 85.0, "2L", BudgetCategory.AVERAGE, 1.0, isStaple = true, isDiscrete = true),
 
                 // ENJOYING
-                Commodity("10", "Choice Mealie Meal", 260.0, "25kg bag", BudgetCategory.ENJOYING, 0.5, isMustHave = true, isStaple = true),
+                Commodity("10", "Choice Mealie Meal", 260.0, "25kg bag", BudgetCategory.ENJOYING, 0.5, isMustHave = true, isStaple = true, isDiscrete = true),
                 Commodity("11", "Beef (Standard)", freshPrices["Meat (beef)"] ?: 95.0, "kg", BudgetCategory.ENJOYING, 3.0),
                 Commodity("12", "Fresh Tilapia", freshPrices["Fish (fresh)"] ?: 75.0, "kg", BudgetCategory.ENJOYING, 4.0),
-                Commodity("13", "Chicken (Broiler)", freshPrices["Meat (chicken)"] ?: 110.0, "Whole", BudgetCategory.ENJOYING, 2.0),
-                Commodity("14", "Basmati Rice", freshPrices["Rice (basmati)"] ?: 140.0, "5kg bag", BudgetCategory.ENJOYING, 0.5, isStaple = true),
-                Commodity("15", "Assorted Fruits", 150.0, "Monthly Supply", BudgetCategory.ENJOYING, 1.0)
+                Commodity("13", "Chicken (Broiler)", freshPrices["Meat (chicken)"] ?: 110.0, "Whole", BudgetCategory.ENJOYING, 2.0, isDiscrete = true),
+                Commodity("14", "Basmati Rice", freshPrices["Rice (basmati)"] ?: 140.0, "5kg bag", BudgetCategory.ENJOYING, 0.5, isStaple = true, isDiscrete = true),
+                
+                // ESSENTIALS (User feedback)
+                Commodity("16", "Table Salt", 12.0, "1kg pack", BudgetCategory.ECONOMICAL, 0.25, isStaple = true, isDiscrete = true),
+                Commodity("17", "Sugar", 45.0, "2kg pack", BudgetCategory.AVERAGE, 0.5, isStaple = true, isDiscrete = true),
+                Commodity("18", "Washing Soap", 25.0, "Tablet", BudgetCategory.ECONOMICAL, 2.0, isStaple = true, isDiscrete = true),
+                Commodity("19", "Bath Soap", 18.0, "Tablet", BudgetCategory.AVERAGE, 2.0, isStaple = true, isDiscrete = true)
             )
 
             val batch = firestore.batch()

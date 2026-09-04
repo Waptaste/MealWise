@@ -6,11 +6,12 @@ data class MealPlanEntry(
     val recipeId: String = "",
     val recipeTitle: String = "",
     val date: Long = 0L,
-    val mealType: String = "" // Stored as String for better Firestore compatibility (e.g., "BREAKFAST")
+    val mealType: String = "", // e.g., "BREAKFAST", etc.
+    val portionSize: Double = 1.0 // 0.5 for small, 1.0 for medium, 1.5 for large
 )
 
 enum class MealType {
-    BREAKFAST, LUNCH, DINNER
+    STARTER, BREAKFAST, LUNCH, DINNER, DESSERT, BEVERAGE
 }
 
 data class ShoppingItem(

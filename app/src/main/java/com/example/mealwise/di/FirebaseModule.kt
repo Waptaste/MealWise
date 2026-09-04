@@ -6,6 +6,7 @@ import com.example.mealwise.data.repository.BudgetRepository
 import com.example.mealwise.data.repository.FirebaseAuthRepository
 import com.example.mealwise.data.repository.FirebaseBudgetRepository
 import com.example.mealwise.data.repository.FirebaseMealPlanRepository
+import com.example.mealwise.data.repository.FirebaseRecipeRepository
 import com.example.mealwise.data.repository.MealPlanRepository
 import com.example.mealwise.data.repository.MockRecipeRepository
 import com.example.mealwise.data.repository.RecipeRepository
@@ -33,7 +34,7 @@ abstract class FirebaseModule {
     @Binds
     @Singleton
     abstract fun bindRecipeRepository(
-        mockRecipeRepository: MockRecipeRepository
+        firebaseRecipeRepository: FirebaseRecipeRepository
     ): RecipeRepository
 
     @Binds

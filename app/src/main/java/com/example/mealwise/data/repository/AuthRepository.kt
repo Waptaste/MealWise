@@ -20,5 +20,11 @@ interface AuthRepository {
 
     fun isUserAuthenticated(): Boolean
 
+    suspend fun sendPasswordResetEmail(email: String): Result<Unit>
+
+    suspend fun sendEmailVerification(): Result<Unit>
+
+    fun isEmailVerified(): Boolean
+
     fun logout()
 }
