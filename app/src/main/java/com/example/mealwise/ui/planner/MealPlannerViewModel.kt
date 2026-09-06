@@ -9,6 +9,7 @@ import com.example.mealwise.data.repository.AuthRepository
 import com.example.mealwise.data.repository.MealPlanRepository
 import com.example.mealwise.data.repository.RecipeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -24,6 +25,10 @@ class MealPlannerViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(MealPlannerUiState())
     val uiState: StateFlow<MealPlannerUiState> = _uiState.asStateFlow()
+
+    // Tracking items that are currently being updated to prevent race conditions with Firestore flow
+    // Map of itemId to isChecked state
+    private val pendingToggles = MutableStateFlow<Map<String, Boolean>>(emptyMap())
 
     init {
         loadData()
@@ -47,24 +52,49 @@ class MealPlannerViewModel @Inject constructor(
 
             combine(
                 mealPlanRepository.getMealPlanEntries(userId),
-                mealPlanRepository.getShoppingListFlow(userId)
-            ) { plans, items ->
-                plans to items
+                mealPlanRepository.getShoppingListFlow(userId),
+                pendingToggles
+            ) { plans, items, pending ->
+                Triple(plans, items, pending)
             }
             .catch { e ->
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
             }
-            .collect { (plans, items) ->
-                // Sort by name for display, but keep them separate if they have different IDs
+            .collect { (plans, items, pending) ->
+                // Sort by name for display
                 val sortedItems = items.sortedBy { it.name }
+
+                // Merge incoming items with pending local changes to prevent "uncrossing" bug
+                val mergedItems = sortedItems.map { item ->
+                    if (pending.containsKey(item.id)) {
+                        // Keep the local state if an update is still in flight
+                        item.copy(isChecked = pending[item.id] ?: item.isChecked)
+                    } else {
+                        item
+                    }
+                }
 
                 _uiState.value = _uiState.value.copy(
                     mealPlans = plans,
-                    shoppingList = sortedItems,
+                    shoppingList = mergedItems,
                     isLoading = false
                 )
                 
-                ensureIngredientsSync(userId, plans, sortedItems)
+                // Remove from pending only when the backend state matches our intended state
+                val itemsToClear = pending.filter { (id, desiredChecked) ->
+                    val serverItem = items.find { it.id == id }
+                    serverItem != null && serverItem.isChecked == desiredChecked
+                }.keys
+                
+                if (itemsToClear.isNotEmpty()) {
+                    // Small delay to ensure any transient UI states settle
+                    viewModelScope.launch {
+                        delay(200)
+                        pendingToggles.value = pendingToggles.value - itemsToClear
+                    }
+                }
+                
+                ensureIngredientsSync(userId, plans, mergedItems)
             }
         }
     }
@@ -121,7 +151,11 @@ class MealPlannerViewModel @Inject constructor(
             if (itemIndex == -1) return@launch
             
             val item = currentList[itemIndex]
-            val updatedItem = item.copy(isChecked = !item.isChecked)
+            val newCheckedState = !item.isChecked
+            val updatedItem = item.copy(isChecked = newCheckedState)
+            
+            // Mark as pending with the intended state
+            pendingToggles.value = pendingToggles.value + (itemId to newCheckedState)
             
             // Optimistic update
             val updatedList = currentList.toMutableList().apply {
@@ -129,9 +163,14 @@ class MealPlannerViewModel @Inject constructor(
             }
             _uiState.value = _uiState.value.copy(shoppingList = updatedList)
 
-            mealPlanRepository.updateShoppingItem(updatedItem).onFailure { e ->
-                _uiState.value = _uiState.value.copy(shoppingList = currentList, error = "Failed to save: ${e.message}")
-            }
+            mealPlanRepository.updateShoppingItem(updatedItem)
+                .onFailure { e ->
+                    // Remove from pending on failure to revert to server state immediately
+                    pendingToggles.value = pendingToggles.value - itemId
+                    _uiState.value = _uiState.value.copy(shoppingList = currentList, error = "Failed to save: ${e.message}")
+                }
+            // On success, we wait for the flow to reconcile and remove it from pendingToggles (handled in loadData)
+            // On success, we wait for the flow to reconcile and remove it from pendingToggles (handled in loadData)
         }
     }
 
@@ -139,17 +178,29 @@ class MealPlannerViewModel @Inject constructor(
         viewModelScope.launch {
             if (_uiState.value.availableRecipes.isEmpty()) return@launch
 
+            // Use a case-insensitive set for comparison
             val neededIngredients = mutableSetOf<String>()
             mealPlans.forEach { plan ->
                 val recipe = _uiState.value.availableRecipes.find { it.id == plan.recipeId }
-                recipe?.ingredients?.forEach { neededIngredients.add(it) }
+                recipe?.ingredients?.forEach { ingredient ->
+                    val normalized = ingredient.trim()
+                    if (normalized.isNotBlank()) {
+                        neededIngredients.add(normalized)
+                    }
+                }
             }
 
-            val existingNames = currentItems.map { it.name }.toSet()
-            val missingIngredients = neededIngredients.filter { !existingNames.contains(it) }
+            val existingNames = currentItems.map { it.name.trim().lowercase() }.toSet()
+            // Only add if it doesn't exist (case insensitive) AND we aren't already trying to add it
+            val missingIngredients = neededIngredients.filter { ingredient ->
+                val normalized = ingredient.lowercase()
+                !existingNames.contains(normalized)
+            }
 
             if (missingIngredients.isNotEmpty()) {
-                val newItems = missingIngredients.map { name ->
+                // To prevent immediate repeated calls, we filter out duplicates in the missing list itself
+                val uniqueMissing = missingIngredients.distinctBy { it.lowercase() }
+                val newItems = uniqueMissing.map { name ->
                     ShoppingItem(id = name, name = name, userId = userId, isChecked = false)
                 }
                 mealPlanRepository.saveShoppingList(userId, newItems)

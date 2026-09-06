@@ -17,6 +17,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -181,7 +182,8 @@ class AuthViewModelTest {
         
         advanceUntilIdle()
 
-        assertNull(viewModel.uiState.value.generalError)
+        // Success message is now set in generalError
+        assertTrue(viewModel.uiState.value.generalError?.contains("Account created") == true)
         assertEquals(false, viewModel.uiState.value.isLoading)
         assertNotNull(viewModel.uiState.value.authenticatedProfile)
         
@@ -308,4 +310,8 @@ class FakeAuthRepository : AuthRepository {
     override fun logout() {
         authenticated = false
     }
+
+    override suspend fun sendPasswordResetEmail(email: String): Result<Unit> = Result.success(Unit)
+    override suspend fun sendEmailVerification(): Result<Unit> = Result.success(Unit)
+    override fun isEmailVerified(): Boolean = true
 }

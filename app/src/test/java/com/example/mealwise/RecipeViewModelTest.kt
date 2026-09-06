@@ -68,20 +68,48 @@ class RecipeViewModelTest {
         assertEquals("Recipe 2", viewModel.uiState.value.recipes[0].title)
         assertTrue(viewModel.uiState.value.recipes[0].dietaryTags.contains("Vegan"))
     }
+
+    @Test
+    fun `addAndImproveRecipe populates ingredients and details`() = runTest {
+        fakeAuthRepository.authenticated = true
+        initViewModel()
+        advanceUntilIdle()
+
+        val rawInput = "2 cups flour\n1kg sugar\nMix them together and bake"
+        viewModel.addAndImproveRecipe("New Cake", rawInput)
+        
+        // Handle delay in simulation
+        testDispatcher.scheduler.advanceTimeBy(2100)
+        advanceUntilIdle()
+
+        val savedRecipe = fakeRecipeRepository.addedRecipes.last()
+        assertEquals("New Cake", savedRecipe.title)
+        assertTrue(savedRecipe.ingredients.contains("2 cups flour"))
+        assertTrue(savedRecipe.ingredients.contains("1kg sugar"))
+        assertTrue(savedRecipe.instructions.contains("Mix them together and bake"))
+        assertTrue(savedRecipe.isUserCreated)
+        assertTrue(savedRecipe.calories > 0)
+    }
 }
 
 class FakeRecipeRepository : RecipeRepository {
-    private val recipes = listOf(
+    private val recipes = mutableListOf(
         Recipe(id = "1", title = "Recipe 1", dietaryTags = listOf("Keto"), ingredients = listOf("Keto Item"), calories = 450),
         Recipe(id = "2", title = "Recipe 2", dietaryTags = listOf("Vegan"), ingredients = listOf("Vegan Item"), calories = 550)
     )
+    val addedRecipes = mutableListOf<Recipe>()
 
-    override suspend fun getRecipes(): Result<List<Recipe>> = Result.success(recipes)
+    override suspend fun getRecipes(): Result<List<Recipe>> = Result.success(recipes + addedRecipes)
 
     override suspend fun getRecipeById(id: String): Result<Recipe?> = Result.success(recipes.find { it.id == id })
 
     override suspend fun getRecipesByTags(tags: List<String>): Result<List<Recipe>> {
-        val filtered = recipes.filter { r -> r.dietaryTags.any { t -> tags.contains(t) } }
+        val filtered = (recipes + addedRecipes).filter { r -> r.dietaryTags.any { t -> tags.contains(t) } }
         return Result.success(filtered)
+    }
+
+    override suspend fun addRecipe(recipe: Recipe, userId: String?): Result<Unit> {
+        addedRecipes.add(recipe)
+        return Result.success(Unit)
     }
 }

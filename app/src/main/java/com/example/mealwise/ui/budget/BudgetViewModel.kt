@@ -92,11 +92,26 @@ class BudgetViewModel @Inject constructor(
     fun generateOptimizedBudget() {
         val cashAmount = _uiState.value.enteredAmount.toDoubleOrNull()
         val size = _uiState.value.householdSize.toIntOrNull() ?: 1
-        
+        val category = _uiState.value.selectedCategory
+
         if (cashAmount == null) {
             _uiState.value = _uiState.value.copy(error = "Please enter your available cash")
             return
         }
+
+        // Validate amount for the selected category
+        val (min, max) = when (category) {
+            BudgetCategory.ECONOMICAL -> 500.0 to 700.0
+            BudgetCategory.AVERAGE -> 800.0 to 1200.0
+            BudgetCategory.ENJOYING -> 1500.0 to 2500.0
+        }
+
+        if (cashAmount < min || cashAmount > max) {
+            _uiState.value = _uiState.value.copy(error = "Amount for ${category.name} must be between K${min.toInt()} - K${max.toInt()}")
+            return
+        }
+
+        _uiState.value = _uiState.value.copy(error = null)
 
         var currentBudgetItems = mutableListOf<BudgetItem>()
         val currentWishlist = _uiState.value.wishlist.toMutableList()
