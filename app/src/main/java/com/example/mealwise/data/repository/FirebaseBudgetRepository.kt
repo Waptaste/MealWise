@@ -4,7 +4,9 @@ import android.util.Log
 import com.example.mealwise.data.api.HdxApiService
 import com.example.mealwise.data.model.BudgetCategory
 import com.example.mealwise.data.model.Commodity
+import com.example.mealwise.data.model.MonthlyBudget
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.snapshots
 import com.google.firebase.firestore.toObjects
 import kotlinx.coroutines.flow.Flow
@@ -113,6 +115,30 @@ class FirebaseBudgetRepository @Inject constructor(
             Log.e("BudgetRepo", "Failed to init commodities", e)
             Result.failure(e)
         }
+    }
+
+    override suspend fun saveBudget(budget: MonthlyBudget): Result<Unit> {
+        return try {
+            val docRef = firestore.collection("users")
+                .document(budget.userId)
+                .collection("saved_budgets")
+                .document()
+            
+            val budgetWithId = budget.copy(id = docRef.id)
+            docRef.set(budgetWithId).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override fun getSavedBudgets(userId: String): Flow<List<MonthlyBudget>> {
+        return firestore.collection("users")
+            .document(userId)
+            .collection("saved_budgets")
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .snapshots()
+            .map { it.toObjects<MonthlyBudget>() }
     }
 
     private suspend fun fetchHdxPrices(): Map<String, Double> {

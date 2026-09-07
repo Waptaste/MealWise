@@ -125,7 +125,7 @@ fun MealPlannerScreen(
         }
 
         RecipeSelectionDialog(
-            title = "Choose a ${showRecipeDialog!!.name.lowercase().capitalize()}",
+            title = "Choose a ${showRecipeDialog!!.name.lowercase().replaceFirstChar { it.uppercase() }}",
             recipes = filteredRecipes,
             onDismiss = { showRecipeDialog = null },
             onSelect = { recipeId ->

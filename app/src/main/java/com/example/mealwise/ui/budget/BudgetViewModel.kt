@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import kotlin.math.floor
 
@@ -31,6 +33,7 @@ class BudgetViewModel @Inject constructor(
 
     init {
         loadCommodities()
+        loadSavedBudgets()
     }
 
     private fun loadCommodities() {
@@ -51,6 +54,19 @@ class BudgetViewModel @Inject constructor(
                             error = null
                         )
                     }
+                }
+        }
+    }
+
+    private fun loadSavedBudgets() {
+        viewModelScope.launch {
+            val user = authRepository.getCurrentUserProfile().getOrNull() ?: return@launch
+            budgetRepository.getSavedBudgets(user.uid)
+                .catch { e ->
+                    _uiState.value = _uiState.value.copy(error = "Failed to load history: ${e.message}")
+                }
+                .collect { budgets ->
+                    _uiState.value = _uiState.value.copy(savedBudgets = budgets)
                 }
         }
     }
@@ -90,94 +106,108 @@ class BudgetViewModel @Inject constructor(
     }
 
     fun generateOptimizedBudget() {
-        val cashAmount = _uiState.value.enteredAmount.toDoubleOrNull()
-        val size = _uiState.value.householdSize.toIntOrNull() ?: 1
-        val category = _uiState.value.selectedCategory
+        viewModelScope.launch {
+            val cashAmount = _uiState.value.enteredAmount.toDoubleOrNull()
+            val size = _uiState.value.householdSize.toIntOrNull() ?: 1
+            val category = _uiState.value.selectedCategory
 
-        if (cashAmount == null) {
-            _uiState.value = _uiState.value.copy(error = "Please enter your available cash")
-            return
-        }
+            if (cashAmount == null) {
+                _uiState.value = _uiState.value.copy(error = "Please enter your available cash")
+                return@launch
+            }
 
-        // Validate amount for the selected category
-        val (min, max) = when (category) {
-            BudgetCategory.ECONOMICAL -> 500.0 to 700.0
-            BudgetCategory.AVERAGE -> 800.0 to 1200.0
-            BudgetCategory.ENJOYING -> 1500.0 to 2500.0
-        }
+            // Validate amount for the selected category
+            val (min, max) = when (category) {
+                BudgetCategory.ECONOMICAL -> 500.0 to 700.0
+                BudgetCategory.AVERAGE -> 800.0 to 1200.0
+                BudgetCategory.ENJOYING -> 1500.0 to 2500.0
+            }
 
-        if (cashAmount < min || cashAmount > max) {
-            _uiState.value = _uiState.value.copy(error = "Amount for ${category.name} must be between K${min.toInt()} - K${max.toInt()}")
-            return
-        }
+            if (cashAmount < min || cashAmount > max) {
+                _uiState.value = _uiState.value.copy(error = "Amount for ${category.name} must be between K${min.toInt()} - K${max.toInt()}")
+                return@launch
+            }
 
-        _uiState.value = _uiState.value.copy(error = null)
+            _uiState.value = _uiState.value.copy(error = null)
 
-        var currentBudgetItems = mutableListOf<BudgetItem>()
-        val currentWishlist = _uiState.value.wishlist.toMutableList()
-        
-        // 1. Initial calculation based on wishlist
-        currentWishlist.forEach { commodity ->
-            val qty = if (commodity.isDiscrete) floor(commodity.baseQuantityPerPerson * size).coerceAtLeast(1.0) else commodity.baseQuantityPerPerson * size
-            currentBudgetItems.add(BudgetItem(
-                commodityName = commodity.name,
-                quantity = qty,
-                unit = commodity.unit,
-                totalCost = qty * commodity.unitPrice,
-                isMustHave = commodity.isMustHave,
-                isStaple = commodity.isStaple,
-                isDiscrete = commodity.isDiscrete
-            ))
-        }
-
-        // 2. Optimization: If over budget, swap for cheaper alternatives
-        var currentTotal = currentBudgetItems.sumOf { it.totalCost }
-        
-        if (currentTotal > cashAmount) {
-            // Find "Enjoying" or "Average" items to swap
-            val swappableIndices = currentBudgetItems.indices.filter { !currentBudgetItems[it].isStaple }
+            var currentBudgetItems = mutableListOf<BudgetItem>()
+            val currentWishlist = _uiState.value.wishlist.toMutableList()
             
-            for (index in swappableIndices) {
-                if (currentTotal <= cashAmount) break
+            // 1. Initial calculation based on wishlist
+            currentWishlist.forEach { commodity ->
+                val qty = if (commodity.isDiscrete) floor(commodity.baseQuantityPerPerson * size).coerceAtLeast(1.0) else commodity.baseQuantityPerPerson * size
+                currentBudgetItems.add(BudgetItem(
+                    commodityName = commodity.name,
+                    quantity = qty,
+                    unit = commodity.unit,
+                    totalCost = qty * commodity.unitPrice,
+                    isMustHave = commodity.isMustHave,
+                    isStaple = commodity.isStaple,
+                    isDiscrete = commodity.isDiscrete
+                ))
+            }
+
+            // 2. Optimization: If over budget, swap for cheaper alternatives
+            var currentTotal = currentBudgetItems.sumOf { it.totalCost }
+            
+            if (currentTotal > cashAmount) {
+                // Find "Enjoying" or "Average" items to swap
+                val swappableIndices = currentBudgetItems.indices.filter { !currentBudgetItems[it].isStaple }
                 
-                val item = currentBudgetItems[index]
-                val originalCommodity = _uiState.value.commodities.find { it.name == item.commodityName } ?: continue
-                
-                // Find a cheaper alternative (same name but lower category, or common swap)
-                val alternative = findCheaperAlternative(originalCommodity)
-                if (alternative != null) {
-                    val newQty = if (alternative.isDiscrete) floor(alternative.baseQuantityPerPerson * size).coerceAtLeast(1.0) else alternative.baseQuantityPerPerson * size
-                    val newCost = newQty * alternative.unitPrice
+                for (index in swappableIndices) {
+                    if (currentTotal <= cashAmount) break
                     
-                    currentTotal = currentTotal - item.totalCost + newCost
-                    currentBudgetItems[index] = BudgetItem(
-                        commodityName = alternative.name + " (Saved ZMW)",
-                        quantity = newQty,
-                        unit = alternative.unit,
-                        totalCost = newCost,
-                        isMustHave = alternative.isMustHave,
-                        isStaple = alternative.isStaple,
-                        isDiscrete = alternative.isDiscrete
-                    )
+                    val item = currentBudgetItems[index]
+                    val originalCommodity = _uiState.value.commodities.find { it.name == item.commodityName } ?: continue
+                    
+                    // Find a cheaper alternative (same name but lower category, or common swap)
+                    val alternative = findCheaperAlternative(originalCommodity)
+                    if (alternative != null) {
+                        val newQty = if (alternative.isDiscrete) floor(alternative.baseQuantityPerPerson * size).coerceAtLeast(1.0) else alternative.baseQuantityPerPerson * size
+                        val newCost = newQty * alternative.unitPrice
+                        
+                        currentTotal = currentTotal - item.totalCost + newCost
+                        currentBudgetItems[index] = BudgetItem(
+                            commodityName = alternative.name + " (Saved ZMW)",
+                            quantity = newQty,
+                            unit = alternative.unit,
+                            totalCost = newCost,
+                            isMustHave = alternative.isMustHave,
+                            isStaple = alternative.isStaple,
+                            isDiscrete = alternative.isDiscrete
+                        )
+                    }
                 }
             }
-        }
 
-        // 3. Final scaling if still over budget (scale non-staples first)
-        if (currentTotal > cashAmount) {
-            val scalingFactor = cashAmount / currentTotal
-            currentBudgetItems = currentBudgetItems.map { item ->
-                if (!item.isStaple) {
-                    val newQty = if (item.isDiscrete) floor(item.quantity * scalingFactor).coerceAtLeast(1.0) else item.quantity * scalingFactor
-                    item.copy(quantity = newQty, totalCost = newQty * (item.totalCost / item.quantity))
-                } else item
-            }.toMutableList()
-        }
+            // 3. Final scaling if still over budget (scale non-staples first)
+            if (currentTotal > cashAmount) {
+                val scalingFactor = cashAmount / currentTotal
+                currentBudgetItems = currentBudgetItems.map { item ->
+                    if (!item.isStaple) {
+                        val newQty = if (item.quantity * scalingFactor < 0.1) 0.0 else if (item.isDiscrete) floor(item.quantity * scalingFactor).coerceAtLeast(1.0) else item.quantity * scalingFactor
+                        item.copy(quantity = newQty, totalCost = newQty * (item.totalCost / item.quantity))
+                    } else item
+                }.toMutableList()
+            }
 
-        _uiState.value = _uiState.value.copy(
-            generatedBudget = MonthlyBudget(cashAmount, _uiState.value.selectedCategory, size, currentBudgetItems),
-            isWishlistMode = false
-        )
+            val budget = MonthlyBudget(
+                userId = authRepository.getCurrentUserProfile().getOrNull()?.uid ?: "",
+                monthYear = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM")),
+                totalAmount = cashAmount,
+                category = _uiState.value.selectedCategory,
+                householdSize = size,
+                items = currentBudgetItems
+            )
+
+            _uiState.value = _uiState.value.copy(
+                generatedBudget = budget,
+                isWishlistMode = false
+            )
+
+            // Persist the budget
+            budgetRepository.saveBudget(budget)
+        }
     }
 
     private fun findCheaperAlternative(original: Commodity): Commodity? {

@@ -88,24 +88,33 @@ class ShoppingListFixVerificationTest {
         val item = viewModel.uiState.value.shoppingList[0]
         assertFalse(item.isChecked)
 
-        // Toggle
+        // 1. Toggle item
         viewModel.toggleShoppingItem(item.id)
         
-        // UI should be checked (optimistic)
-        assertTrue(viewModel.uiState.value.shoppingList[0].isChecked)
-        
-        // Simulate Firestore emitting STALE data (unchecked) while the update is still in flight
-        // This is what caused the bug
-        fakeMealPlanRepository.triggerUpdate() // This emits the current repo state (which is still unchecked in this mock if not updated yet)
-        // Wait, the FakeRepo updates immediately. I need to simulate a stale emit.
-        
+        // 2. Simulate Firestore emitting STALE data (unchecked) immediately (local cache behavior)
         val staleList = listOf(ShoppingItem(id = "Salt", name = "Salt", isChecked = false, userId = "123"))
         fakeMealPlanRepository.emitStale(staleList)
         advanceUntilIdle()
         
-        // Even though stale data was emitted, the ViewModel should have kept the checked state
-        // because "Salt" was in pendingToggles
-        assertTrue(viewModel.uiState.value.shoppingList[0].isChecked)
+        // UI should still be checked because it's in pendingToggles
+        assertTrue("UI should stay checked despite stale data", viewModel.uiState.value.shoppingList[0].isChecked)
+        
+        // 3. Simulate Firestore emitting CORRECT data (checked) from server
+        fakeMealPlanRepository.shoppingItems[0] = ShoppingItem(id = "Salt", name = "Salt", isChecked = true, userId = "123")
+        fakeMealPlanRepository.triggerUpdate()
+        advanceUntilIdle()
+        
+        // Should still be checked
+        assertTrue("UI should be checked after server sync", viewModel.uiState.value.shoppingList[0].isChecked)
+        
+        // 4. After some time, pendingToggles should be cleared (the 200ms delay in ViewModel)
+        // advanceUntilIdle already handled it, but let's be explicit if needed
+        
+        // Now if we emit stale data AGAIN, it should finally uncross (because it's no longer pending)
+        // (Though this shouldn't happen in real Firestore after a server sync)
+        fakeMealPlanRepository.emitStale(staleList)
+        advanceUntilIdle()
+        assertFalse("UI should uncross if server says so and NOT pending", viewModel.uiState.value.shoppingList[0].isChecked)
     }
 }
 

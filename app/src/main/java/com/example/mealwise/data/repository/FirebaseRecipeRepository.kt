@@ -1,6 +1,7 @@
 package com.example.mealwise.data.repository
 
 import com.example.mealwise.data.model.Recipe
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.toObjects
 import kotlinx.coroutines.tasks.await
@@ -10,6 +11,7 @@ import javax.inject.Singleton
 @Singleton
 class FirebaseRecipeRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
+    private val firebaseAuth: FirebaseAuth,
     private val mockRecipeRepository: MockRecipeRepository // Fallback/Static data
 ) : RecipeRepository {
 
@@ -21,7 +23,7 @@ class FirebaseRecipeRepository @Inject constructor(
             val globalRecipes = snapshot.toObjects<Recipe>()
             
             // Also fetch user-specific custom recipes
-            val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+            val uid = firebaseAuth.currentUser?.uid
             val customRecipes = if (uid != null) {
                 firestore.collection("users")
                     .document(uid)

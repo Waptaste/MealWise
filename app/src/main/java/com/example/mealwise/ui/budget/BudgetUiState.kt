@@ -10,6 +10,7 @@ data class BudgetUiState(
     val enteredAmount: String = "",
     val householdSize: String = "4",
     val generatedBudget: MonthlyBudget? = null,
+    val savedBudgets: List<MonthlyBudget> = emptyList(),
     val commodities: List<Commodity> = emptyList(),
     val wishlist: List<Commodity> = emptyList(), // Items user wants
     val isLoading: Boolean = false,

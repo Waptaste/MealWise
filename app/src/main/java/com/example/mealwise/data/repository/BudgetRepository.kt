@@ -1,6 +1,7 @@
 package com.example.mealwise.data.repository
 
 import com.example.mealwise.data.model.Commodity
+import com.example.mealwise.data.model.MonthlyBudget
 import kotlinx.coroutines.flow.Flow
 
 interface BudgetRepository {
@@ -11,4 +12,8 @@ interface BudgetRepository {
     suspend fun addCommodity(commodity: Commodity): Result<Unit>
     suspend fun deleteCommodity(id: String): Result<Unit>
     suspend fun initializeDefaultCommodities(): Result<Unit>
+    
+    // Budget Persistence
+    suspend fun saveBudget(budget: MonthlyBudget): Result<Unit>
+    fun getSavedBudgets(userId: String): Flow<List<MonthlyBudget>>
 }

@@ -27,8 +27,12 @@ data class BudgetItem(
 )
 
 data class MonthlyBudget(
+    val id: String = "",
+    val userId: String = "",
+    val monthYear: String = "", // e.g., "2024-08"
     val totalAmount: Double = 0.0,
     val category: BudgetCategory = BudgetCategory.AVERAGE,
     val householdSize: Int = 1,
-    val items: List<BudgetItem> = emptyList()
+    val items: List<BudgetItem> = emptyList(),
+    val createdAt: Long = System.currentTimeMillis()
 )

@@ -3,6 +3,7 @@ package com.example.mealwise.ui.recipes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mealwise.data.model.Recipe
+import com.example.mealwise.data.model.MealType
 import com.example.mealwise.data.repository.AuthRepository
 import com.example.mealwise.data.repository.RecipeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,9 +34,11 @@ class RecipeViewModel @Inject constructor(
             val userProfile = authRepository.getCurrentUserProfile().getOrNull()
             
             recipeRepository.getRecipes().onSuccess { allRecipes ->
-                // Filter by dietary preference if available
+                // Filter by dietary preference if available, but always include user-created ones
                 val filtered = if (userProfile != null && userProfile.dietaryPreferences.isNotEmpty()) {
                     allRecipes.filter { recipe ->
+                        recipe.isUserCreated || 
+                        recipe.creatorId == userProfile.uid ||
                         recipe.dietaryTags.any { tag -> userProfile.dietaryPreferences.contains(tag) } || 
                         recipe.dietaryTags.isEmpty()
                     }
@@ -56,7 +59,7 @@ class RecipeViewModel @Inject constructor(
         }
     }
 
-    fun addAndImproveRecipe(title: String, rawInstructions: String) {
+    fun addAndImproveRecipe(title: String, rawInstructions: String, mealType: MealType = MealType.LUNCH) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             
@@ -106,7 +109,7 @@ class RecipeViewModel @Inject constructor(
                 imageUrl = randomImage,
                 ingredients = finalIngredients,
                 instructions = finalInstructions,
-                dietaryTags = listOf("User-Created", "AI-Improved", "Traditional"),
+                dietaryTags = listOf("User-Created", "AI-Improved", "Traditional", mealType.name.lowercase().replaceFirstChar { it.uppercase() }),
                 calories = Random.nextInt(300, 600),
                 proteinGrams = Random.nextInt(15, 35),
                 carbsGrams = Random.nextInt(40, 70),

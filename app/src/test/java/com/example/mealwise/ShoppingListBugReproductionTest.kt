@@ -88,6 +88,7 @@ class ShoppingListBugReproductionTest {
 
         // Toggle
         viewModel.toggleShoppingItem(item.id)
+        advanceUntilIdle()
         
         // UI should be checked (optimistic)
         assertTrue(viewModel.uiState.value.shoppingList[0].isChecked)

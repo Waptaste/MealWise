@@ -39,24 +39,30 @@ fun BudgetScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    var showHistory by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (uiState.isWishlistMode) "Build Your Wishlist" else "Budget Result", fontWeight = FontWeight.Bold) },
+                title = { Text(if (showHistory) "Budget History" else if (uiState.isWishlistMode) "Build Your Wishlist" else "Budget Result", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = { if (showHistory) showHistory = false else onBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    if (uiState.isWishlistMode) {
-                        IconButton(onClick = onNavigateToManagePrices) {
-                            Icon(Icons.Default.Settings, contentDescription = "Manage Prices")
+                    if (!showHistory) {
+                        IconButton(onClick = { showHistory = true }) {
+                            Icon(Icons.Default.History, contentDescription = "History")
                         }
-                    } else {
-                        IconButton(onClick = { viewModel.switchToWishlist() }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit Wishlist")
+                        if (uiState.isWishlistMode) {
+                            IconButton(onClick = onNavigateToManagePrices) {
+                                Icon(Icons.Default.Settings, contentDescription = "Manage Prices")
+                            }
+                        } else {
+                            IconButton(onClick = { viewModel.switchToWishlist() }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit Wishlist")
+                            }
                         }
                     }
                 }
@@ -74,6 +80,16 @@ fun BudgetScreen(
                     isLoading = uiState.isLoading,
                     error = uiState.error,
                     onRetry = { viewModel.retryLoading() }
+                )
+            } else if (showHistory) {
+                HistoryMode(
+                    savedBudgets = uiState.savedBudgets,
+                    onSelectBudget = { budget ->
+                        // In a real app we might navigate to a detail view
+                        // For now we'll just show it in result mode
+                        // viewModel.onBudgetSelected(budget) // Would need to implement this
+                        showHistory = false
+                    }
                 )
             } else {
                 AnimatedContent(
@@ -110,6 +126,44 @@ fun BudgetScreen(
                 viewModel.applyReplacement(uiState.itemToReplace!!, newCommodity)
             }
         )
+    }
+}
+
+@Composable
+fun HistoryMode(
+    savedBudgets: List<MonthlyBudget>,
+    onSelectBudget: (MonthlyBudget) -> Unit
+) {
+    if (savedBudgets.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No saved budgets yet.", style = MaterialTheme.typography.bodyLarge)
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(savedBudgets) { budget ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable { onSelectBudget(budget) },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(text = budget.monthYear, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(text = "${budget.category.name} • ${budget.householdSize} People", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text(text = "K${"%.2f".format(budget.totalAmount)}", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
     }
 }
 

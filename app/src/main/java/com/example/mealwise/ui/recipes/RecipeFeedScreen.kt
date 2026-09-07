@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.mealwise.data.model.Recipe
+import com.example.mealwise.data.model.MealType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,8 +86,8 @@ fun RecipeFeedScreen(
     if (showAddRecipeDialog) {
         AddAndImproveRecipeDialog(
             onDismiss = { showAddRecipeDialog = false },
-            onImprove = { title, instructions ->
-                viewModel.addAndImproveRecipe(title, instructions)
+            onImprove = { title, instructions, type ->
+                viewModel.addAndImproveRecipe(title, instructions, type)
                 showAddRecipeDialog = false
             }
         )
@@ -174,10 +175,11 @@ fun BadgeChip(label: String) {
 @Composable
 fun AddAndImproveRecipeDialog(
     onDismiss: () -> Unit,
-    onImprove: (String, String) -> Unit
+    onImprove: (String, String, MealType) -> Unit
 ) {
     var title by remember { mutableStateOf("") }
     var instructions by remember { mutableStateOf("") }
+    var selectedType by remember { mutableStateOf(MealType.LUNCH) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -192,18 +194,34 @@ fun AddAndImproveRecipeDialog(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
+                
+                Text("Meal Category:", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val types = listOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER)
+                    types.forEach { type ->
+                        FilterChip(
+                            selected = selectedType == type,
+                            onClick = { selectedType = type },
+                            label = { Text(type.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                        )
+                    }
+                }
+
                 OutlinedTextField(
                     value = instructions,
                     onValueChange = { instructions = it },
                     label = { Text("Rough Instructions / Ingredients") },
-                    modifier = Modifier.fillMaxWidth().height(150.dp),
+                    modifier = Modifier.fillMaxWidth().height(120.dp),
                     shape = RoundedCornerShape(12.dp)
                 )
             }
         },
         confirmButton = {
             Button(
-                onClick = { if (title.isNotBlank()) onImprove(title, instructions) },
+                onClick = { if (title.isNotBlank()) onImprove(title, instructions, selectedType) },
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
